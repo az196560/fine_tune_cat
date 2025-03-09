@@ -490,7 +490,7 @@ def main(args):
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         mixed_precision=args.mixed_precision,
         log_with="tensorboard",
-        logging_dir=logging_dir,
+        project_dir=logging_dir,
     )
 
     # Currently, it's not possible to do gradient accumulation when training two models with accelerate.accumulate
@@ -608,11 +608,11 @@ def main(args):
     if args.train_text_encoder:
         text_encoder_lora_params, _ = inject_trainable_lora(
             text_encoder,
-            target_replace_module=["CLIPAttention"],
+            target_replace_module=["CLIPSdpaAttention"],
             r=args.lora_rank,
         )
         for _up, _down in extract_lora_ups_down(
-            text_encoder, target_replace_module=["CLIPAttention"]
+            text_encoder, target_replace_module=["CLIPSdpaAttention"]
         ):
             print("Before training: text encoder First Layer lora up", _up.weight.data)
             print(
@@ -926,7 +926,7 @@ def main(args):
                             save_lora_weight(
                                 pipeline.text_encoder,
                                 filename_text_encoder,
-                                target_replace_module=["CLIPAttention"],
+                                target_replace_module=["CLIPSdpaAttention"],
                             )
 
                         for _up, _down in extract_lora_ups_down(pipeline.unet):
@@ -942,7 +942,7 @@ def main(args):
                         if args.train_text_encoder:
                             for _up, _down in extract_lora_ups_down(
                                 pipeline.text_encoder,
-                                target_replace_module=["CLIPAttention"],
+                                target_replace_module=["CLIPSdpaAttention"],
                             ):
                                 print(
                                     "First Text Encoder Layer's Up Weight is now : ",
@@ -982,14 +982,14 @@ def main(args):
                 save_lora_weight(
                     pipeline.text_encoder,
                     args.output_dir + "/lora_weight.text_encoder.pt",
-                    target_replace_module=["CLIPAttention"],
+                    target_replace_module=["CLIPSdpaAttention"],
                 )
 
         if args.output_format == "safe" or args.output_format == "both":
             loras = {}
             loras["unet"] = (pipeline.unet, {"CrossAttention", "Attention", "GEGLU"})
             if args.train_text_encoder:
-                loras["text_encoder"] = (pipeline.text_encoder, {"CLIPAttention"})
+                loras["text_encoder"] = (pipeline.text_encoder, {"CLIPSdpaAttention"})
 
             save_safeloras(loras, args.output_dir + "/lora_weight.safetensors")
 
